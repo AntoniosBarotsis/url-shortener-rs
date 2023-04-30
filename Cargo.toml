@@ -1,0 +1,22 @@
+[package]
+name = "url-shortener-rs"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+shuttle-runtime = "0.15.0"
+shuttle-secrets = "0.15.0"
+shuttle-static-folder = "0.15.0"
+shuttle-shared-db = { version = "0.15.0", features = ["postgres"] }
+shuttle-axum = "0.15.0"
+axum = "0.6.18"
+sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "postgres"] }
+tokio = "1.28.0"
+url = "2.3.1"
+serde_json = "1.0.96"
+serde = "1.0.160"
+nanoid = "0.4.0"
+tracing = "0.1.37"
