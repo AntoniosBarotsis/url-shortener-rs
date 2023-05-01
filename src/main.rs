@@ -19,10 +19,7 @@ use sqlx::{Executor, FromRow, PgPool};
 use tracing::error;
 use url::Url;
 
-#[derive(Clone)]
-struct AppState {
-  pub pool: PgPool,
-}
+static BASE_URL: &str = "https://url-shortener-rs.shuttleapp.rs";
 
 #[shuttle_runtime::main]
 async fn axum(
@@ -33,17 +30,20 @@ async fn axum(
   let schema = secret_store
     .get("SCHEMA")
     .expect("SCHEMA secret not found.");
+
   let schema =
     read_to_string(static_folder.as_path().join(schema)).expect("SCHEMA is read correctly.");
 
   if let Err(err) = pool.execute(schema.as_str()).await {
-    error!("{}", err);
+    error!("Failed to execute schema: {}", err);
+    panic!("Failed to execute schema.");
   }
 
   let router = Router::new()
     .route("/:id", get(retrieve))
     .route("/shorten", post(shorten))
     .route("/metadata/:id", get(get_metadata))
+    .route("/help", get(|| async { help() }))
     .with_state(AppState { pool });
 
   Ok(router.into())
@@ -58,14 +58,29 @@ async fn shorten(State(state): State<AppState>, url: String) -> impl IntoRespons
     Err(e) => return Err((StatusCode::BAD_REQUEST, e.to_string())),
   };
 
+  // Insert row in the urls table.
   let res = sqlx::query("INSERT INTO urls(id, url) VALUES ($1, $2)")
     .bind(id)
     .bind(p_url.as_str())
     .execute(&state.pool)
     .await;
 
+  // Insert row in the metadata table.
+  let _meta: Metadata =
+    sqlx::query_as("INSERT INTO metadata(id, url, hits) VALUES ($1, $2, 0) RETURNING *")
+      .bind(id)
+      .bind(url)
+      .fetch_one(&state.pool)
+      .await
+      .expect("Creation did not fail.");
+
   match res {
-    Ok(_) => Ok((StatusCode::OK, format!("<base url>/{id}"))),
+    Ok(_) => Ok((
+      StatusCode::CREATED,
+      Json(CreatedURL {
+        url: format!("{BASE_URL}/{id}"),
+      }),
+    )),
     Err(e) => Err((StatusCode::BAD_REQUEST, e.to_string())),
   }
 }
@@ -78,7 +93,7 @@ async fn retrieve(id: Path<String>, State(state): State<AppState>) -> impl IntoR
 
   match res {
     Ok(res) => {
-      let _meta = update_metadata(&id.0, &res.url, &state.pool).await;
+      let _meta = update_metadata(&id.0, &state.pool).await;
       Ok(Redirect::to(&res.url))
     }
     Err(_) => Err((
@@ -103,31 +118,26 @@ async fn get_metadata(id: Path<String>, State(state): State<AppState>) -> impl I
   }
 }
 
-async fn update_metadata(id: &str, url: &str, pool: &PgPool) -> Metadata {
+async fn update_metadata(id: &str, pool: &PgPool) -> Metadata {
   let meta: Result<Metadata, sqlx::Error> =
     sqlx::query_as("UPDATE metadata SET hits = hits + 1 WHERE id = $1 RETURNING *")
       .bind(id)
       .fetch_one(pool)
       .await;
 
-  match meta {
-    Ok(meta) => meta,
-    Err(e) => match e {
-      sqlx::Error::RowNotFound => {
-        let meta: Metadata =
-          sqlx::query_as("INSERT INTO metadata(id, url, hits) VALUES ($1, $2, 1) RETURNING *")
-            .bind(id)
-            .bind(url)
-            .fetch_one(pool)
-            .await
-            .expect("Creation did not fail.");
-        meta
-      }
-      _ => {
-        panic!("Something went wrong, please open a bug report.");
-      }
-    },
-  }
+  meta.expect("Something went wrong with the metadata id, please open a bug report.")
+}
+
+fn help() -> impl IntoResponse {
+  r#"
+  [POST] /shorten      - Shortens a URL                  | Body should contain the URL in raw text.
+  [GET]  /:id          - Redirects to the URL
+  [GET]  /metadata/:id - Returns the metadata of the URL"#
+}
+
+#[derive(Clone)]
+struct AppState {
+  pub pool: PgPool,
 }
 
 #[derive(Serialize, FromRow)]
@@ -141,4 +151,9 @@ struct Metadata {
   pub id: String,
   pub url: String,
   pub hits: i32,
+}
+
+#[derive(Serialize)]
+struct CreatedURL {
+  pub url: String,
 }
