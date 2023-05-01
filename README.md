@@ -25,3 +25,8 @@ $ curl 'localhost:8000/help'
   [GET]  /:id          - Redirects to the URL
   [GET]  /metadata/:id - Returns the metadata of the URL
 ```
+
+## Production
+
+This is currently also hosted at `https://gdsc-tud-url.shuttleapp.rs` however I will make no guarantees on its
+stability/longevity as I made this over a couple of hours as an experiment 😅

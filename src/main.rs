@@ -19,7 +19,7 @@ use sqlx::{Executor, FromRow, PgPool};
 use tracing::error;
 use url::Url;
 
-static BASE_URL: &str = "https://url-shortener-rs.shuttleapp.rs";
+static BASE_URL: &str = "https://gdsc-tud-url.shuttleapp.rs";
 
 #[shuttle_runtime::main]
 async fn axum(
