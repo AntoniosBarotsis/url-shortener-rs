@@ -1,5 +1,7 @@
 # URL-Shortener-rs
 
+[![Build](https://github.com/AntoniosBarotsis/url-shortener-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/AntoniosBarotsis/url-shortener-rs/actions/workflows/ci.yml)
+
 A very simple URL shortener, mostly built to familiarize myself with
 [shuttle.rs](https://www.shuttle.rs/).
 
