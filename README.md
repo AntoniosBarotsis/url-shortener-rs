@@ -5,6 +5,10 @@
 A very simple URL shortener, mostly built to familiarize myself with
 [shuttle.rs](https://www.shuttle.rs/).
 
+This somewhat follows
+[one of the official tutorials](https://docs.shuttle.rs/tutorials/url-shortener) only using Axum
+instead of Rocket and also adding a metadata component to the whole thing.
+
 ## Requirements
 
 You will need to [install `protoc`](https://docs.shuttle.rs/support/installing-protoc) as well as
